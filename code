@@ -1,0 +1,146 @@
+DRIVER
+
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+public class  drv {
+    public static void main(String[] args)throws Exception{
+        Configuration conf= new Configuration();
+   
+        @SuppressWarnings("deprecation")
+        Job job = new Job(conf, "7.3");
+        job.setJarByClass(drv.class);
+        job.setMapOutputKeyClass(wc.class);  
+        job.setMapOutputValueClass(IntWritable.class);
+        job.setMapperClass(mpr.class); //Mapper class
+        job.setReducerClass(redr.class); // Reducer class
+        job.setOutputKeyClass(wc.class); //Composite class
+        job.setOutputValueClass(IntWritable.class);
+        Path path1 = new Path(args[1]); 
+        FileInputFormat.addInputPath(job,new Path(args[0]));//input path
+        FileOutputFormat.setOutputPath(job,path1); // output path
+        job.waitForCompletion(true);   
+    }
+    }
+    
+    
+    
+    MAPPER
+    
+    
+    
+import java.io.IOException;
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Mapper;
+
+public class mpr extends Mapper <LongWritable,Text,wc,IntWritable>{
+    public void map(LongWritable key,Text value,Context context)
+    throws IOException,InterruptedException{
+        wc outkey=new wc();
+        IntWritable outvalue=new IntWritable();
+        String[] a=value.toString().split(",");
+        if(a.length>5){
+if(a[1].equals("0")){
+    outkey.set("survived",a[4]);
+    outvalue.set(1);
+        context.write(outkey,outvalue);
+    }
+if(a[1].equals("1")){
+    outkey.set("Dead",a[4]);
+    outvalue.set(1);
+    context.write(outkey,outvalue);
+}}
+        }}
+        
+        
+        
+        REDUCER
+        
+        
+        import java.io.IOException;
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.mapreduce.Reducer;
+
+public class redr
+extends Reducer <wc,IntWritable,wc,IntWritable>{
+   
+public void reduce(wc ikey,Iterable<IntWritable>values,Context context)
+        throws IOException, InterruptedException{
+    int sum=0;
+    for(IntWritable value :values){
+        sum=sum+value.get();
+    }
+   
+            context.write(ikey,new IntWritable(sum));
+        }
+}
+
+
+
+CUSTOM KEY
+
+
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.EOFException;
+import java.io.IOException;
+
+import org.apache.hadoop.io.WritableComparable;
+
+public class wc implements WritableComparable<wc>{
+    int m=0;
+    private String status;
+    private String gender;
+   
+    public void set(String a,String b){
+        status=a;
+        gender=b;
+    }
+    public void readFields(DataInput in) throws IOException,EOFException{
+        status=in.readUTF();
+        gender=in.readUTF();
+    }
+    public void write(DataOutput out)throws IOException,EOFException{
+        out.writeUTF(status);
+        out.writeUTF(gender);   
+    }
+    public String toString(){
+        return (status+" "+gender).toString();
+    }
+    public int hashcode(){
+        return status.hashCode();
+    }
+public boolean equals(Object ot){
+    if(ot instanceof wc){
+        wc composite =(wc) ot;
+        return status.equalsIgnoreCase(composite.status)&&gender.equalsIgnoreCase(composite.gender);
+       
+    }
+    return false;
+}
+
+@Override
+public int compareTo(wc o) {
+    if(o instanceof wc)
+    { wc ot=(wc)o;
+    int cmp=status.compareTo(ot.status);
+    if(cmp!=0){
+        m=cmp;
+    }
+    else
+        m=gender.compareTo(o.gender);
+    }
+    return m;}
+}
+
